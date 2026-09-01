@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
-from outlook_cli.models import Attachment, Contact, Email, EmailAddress, Event, Folder
+from outlook_cli.models import Attachment, Contact, Email, EmailAddress, Event, Folder, _parse_dt
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -186,3 +186,23 @@ class TestEmailAddress:
         data = {"Name": "Carol", "Address": "carol@x.com"}
         ea = EmailAddress.from_api(data)
         assert ea.name == "Carol"
+
+
+# ── _parse_dt ──────────────────────────────────────────────
+
+
+class TestParseDt:
+    def test_empty_returns_min(self):
+        assert _parse_dt("") == datetime.min
+
+    def test_z_suffix_normalized_to_utc(self):
+        dt = _parse_dt("2024-03-15T10:00:00Z")
+        assert dt.year == 2024 and dt.utcoffset() == timedelta(0)
+
+    def test_naive_gets_utc_offset(self):
+        dt = _parse_dt("2024-03-15T10:00:00")
+        assert dt.utcoffset() == timedelta(0)
+
+    def test_malformed_returns_min(self):
+        # Passes the normalization guard but ISO parsing rejects the date.
+        assert _parse_dt("2024-13-99T99:99:99+00:00") == datetime.min

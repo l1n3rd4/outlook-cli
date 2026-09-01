@@ -32,6 +32,7 @@ dependencies = [
     "playwright>=1.40",
     "beautifulsoup4>=4.12",
     "keyring>=25.0",
+    "tzdata; platform_system == 'Windows'",
 ]
 
 [project.urls]
@@ -43,12 +44,25 @@ Issues = "https://github.com/yusufaltunbicak/outlook-cli/issues"
 outlook = "outlook_cli.cli:cli"
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "ruff>=0.4"]
+dev = ["pytest>=8.0", "ruff>=0.4", "pytest-cov>=5.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "--cov=outlook_cli --cov-report=term-missing --cov-fail-under=100"
 markers = [
     "smoke: marks tests as smoke tests (require live Outlook token)",
+]
+
+[tool.coverage.run]
+source = ["outlook_cli"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
 ]
 
 [tool.hatch.build.targets.wheel]

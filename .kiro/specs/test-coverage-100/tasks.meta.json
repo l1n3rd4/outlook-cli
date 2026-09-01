@@ -1,0 +1,318 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. cov tooling config (pyproject.toml)": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204757108
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204765614
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204832020
+      }
+    ],
+    "2. serialization.py tests (10 miss)": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204757187
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204840334
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205064035
+      }
+    ],
+    "3. account.py tests (60 miss)": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204757246
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204848164
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205064964
+      }
+    ],
+    "4. signature_manager.py tests (8 miss)": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204757295
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204856275
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205066447
+      }
+    ],
+    "5. category_manager.py tests (19 miss)": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204757416
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204863361
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205067330
+      }
+    ],
+    "6.1 rate-limit + token-expiry": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204757467
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204876863
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205068230
+      }
+    ],
+    "6.2 get_thread ordering": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204757516
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205075053
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205443781
+      }
+    ],
+    "6.3 _build_query_params table-driven": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204757551
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205081830
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205441406
+      }
+    ],
+    "6.4 remaining client branches": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204757596
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205450483
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788206171340
+      }
+    ],
+    "7. _common.py tests (23 miss)": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204757640
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205085827
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205444559
+      }
+    ],
+    "8. summary.py tests (17 miss)": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204757695
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205086900
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205442401
+      }
+    ],
+    "9. schedule.py tests (61 miss)": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204757740
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205451440
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788206729519
+      }
+    ],
+    "10. mail.py tests (68 miss)": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204757791
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205453867
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788206169537
+      }
+    ],
+    "11. calendar.py tests (96 miss)": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204757843
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205454092
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788206168146
+      }
+    ],
+    "12. smaller command modules": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204757888
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788206177075
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788206730370
+      }
+    ],
+    "13. formatter.py tests (181 miss)": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204757944
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205087824
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205440006
+      }
+    ],
+    "14. auth.py tests (90 miss, mostly pragma)": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204757987
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788205454784
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788206170564
+      }
+    ],
+    "15. pragma audit + final verification": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788204758033
+      },
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788206735231
+      },
+      {
+        "executionId": "b63e8388-621d-416f-aefe-c91a61933c28",
+        "chatSessionId": "sess_443eb074-a666-45e0-905c-2bb356ef0cef",
+        "timestamp": 1788209372327
+      }
+    ],
+    "6. client.py REST layer tests (176 miss)": [
+      {
+        "executionId": "877f3c6d-740e-4741-94b5-7ca767ca35ca",
+        "chatSessionId": "sess_bdc88807-710d-48cb-a2e8-320e7850c490",
+        "timestamp": 1788206171395
+      }
+    ]
+  }
+}

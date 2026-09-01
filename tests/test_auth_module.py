@@ -339,3 +339,434 @@ def test_login_raises_when_token_cannot_be_captured(monkeypatch, tmp_path):
 
     with pytest.raises(AuthRequiredError):
         auth.login()
+
+
+def test_get_token_falls_back_to_login_when_no_env_or_cache(monkeypatch, tmp_path):
+    _patch_account(monkeypatch, tmp_path)
+    monkeypatch.delenv("OUTLOOK_TOKEN", raising=False)
+    monkeypatch.setattr(auth, "_load_cached_token", lambda: None)
+    monkeypatch.setattr(auth, "login", lambda: "fresh-token")
+
+    assert auth.get_token() == "fresh-token"
+
+
+def test_get_token_named_account_falls_back_to_login(monkeypatch, tmp_path):
+    _patch_account(monkeypatch, tmp_path)
+    monkeypatch.delenv("OUTLOOK_TOKEN", raising=False)
+    monkeypatch.setattr(auth, "_load_cached_token", lambda account_name=None: None)
+    monkeypatch.setattr(auth, "login", lambda account_name=None: f"fresh-{account_name}")
+
+    assert auth.get_token("work") == "fresh-work"
+
+
+def test_login_with_token_validates_and_binds(monkeypatch, tmp_path):
+    _patch_account(monkeypatch, tmp_path)
+    saved = {}
+    monkeypatch.setattr(auth, "_save_token", lambda t, acc, info: saved.update(token=t, account=acc, info=info))
+    monkeypatch.setattr(auth, "_get_me_for_token", lambda t: {"Id": "m-1", "EmailAddress": "a@example.com", "DisplayName": "A"})
+    monkeypatch.setattr(auth.account_service, "ensure_account_known", lambda name: None)
+
+    token = "header.payload.signature"
+    assert auth.login(token=token) == token
+    assert saved["token"] == token
+    assert saved["account"] == "default"
+
+
+def test_login_with_token_rejects_bad_jwt(monkeypatch, tmp_path):
+    _patch_account(monkeypatch, tmp_path)
+    with pytest.raises(ValueError, match="Invalid token format"):
+        auth.login(token="only.two")
+
+
+def test_login_with_token_allow_create_skips_ensure_known(monkeypatch, tmp_path):
+    _patch_account(monkeypatch, tmp_path)
+    called = {"ensure": False}
+    monkeypatch.setattr(auth, "_save_token", lambda *a, **k: None)
+    monkeypatch.setattr(auth, "_get_me_for_token", lambda t: {"Id": "m", "EmailAddress": "x@example.com"})
+    monkeypatch.setattr(auth.account_service, "ensure_account_known", lambda name: called.__setitem__("ensure", True))
+
+    auth.login(token="a.b.c", allow_create=True)
+    assert called["ensure"] is False
+
+
+def test_login_debug_prints_capture_and_totals(monkeypatch, tmp_path, capsys):
+    token = "y" * 101
+    _patch_account(monkeypatch, tmp_path)
+    monkeypatch.setattr(auth, "_chmod_600", lambda _path: None)
+    monkeypatch.setattr(auth, "_save_token", lambda *a, **k: None)
+    monkeypatch.setattr(auth, "_pick_best_token", lambda tokens, debug=False: tokens[0])
+    monkeypatch.setattr(auth, "_get_me_for_token", lambda v: {"Id": "m", "EmailAddress": "a@example.com"})
+    _install_fake_playwright(monkeypatch, token=token)
+
+    auth.login(debug=True)
+
+    out = capsys.readouterr().out
+    assert "[debug] Bearer token in:" in out
+    assert "[debug] Captured token" in out
+    assert "[debug] Total requests with Bearer:" in out
+
+
+def test_login_ignores_short_bearer_tokens(monkeypatch, tmp_path):
+    _patch_account(monkeypatch, tmp_path)
+    monkeypatch.setattr(auth, "_chmod_600", lambda _path: None)
+    # Advance the clock so the capture loop exits immediately (short token not captured).
+    clock = iter([0.0, 0.0, 10_000.0, 10_000.0, 10_000.0])
+    monkeypatch.setattr(auth.time, "time", lambda: next(clock, 10_000.0))
+    _install_fake_playwright(monkeypatch, token="short-token", raise_on_wait=False)
+
+    with pytest.raises(AuthRequiredError):
+        auth.login()
+
+
+def test_login_swallows_storage_state_errors(monkeypatch, tmp_path):
+    token = "z" * 101
+    _patch_account(monkeypatch, tmp_path)
+    monkeypatch.setattr(auth, "_save_token", lambda *a, **k: None)
+    monkeypatch.setattr(auth, "_pick_best_token", lambda tokens, debug=False: tokens[0])
+    monkeypatch.setattr(auth, "_get_me_for_token", lambda v: {"Id": "m", "EmailAddress": "a@example.com"})
+    _install_fake_playwright(monkeypatch, token=token)
+
+    def boom(path):
+        raise RuntimeError("cannot save state")
+
+    monkeypatch.setattr(_FakeContext, "storage_state", lambda self, path: boom(path))
+
+    def close_boom(self):
+        raise RuntimeError("close failed")
+
+    monkeypatch.setattr(_FakeBrowser, "close", close_boom)
+
+    # storage_state + browser.close errors are swallowed; login still succeeds
+    assert auth.login() == token
+
+
+def test_pick_best_token_debug_lists_audiences(monkeypatch, capsys):
+    good = _jwt({"aud": "outlook"})
+
+    def fake_get(url, headers, timeout):
+        return types.SimpleNamespace(status_code=200 if "messages" in url else 401)
+
+    monkeypatch.setattr(auth.httpx, "get", fake_get)
+
+    assert auth._pick_best_token([good], debug=True) == good
+    out = capsys.readouterr().out
+    assert "audience=outlook" in out
+    assert "Token works with REST v2" in out
+
+
+def test_pick_best_token_falls_back_to_me_endpoint(monkeypatch):
+    good = "me-token"
+
+    def fake_get(url, headers, timeout):
+        if url.endswith("/me"):
+            return types.SimpleNamespace(status_code=200)
+        return types.SimpleNamespace(status_code=404)
+
+    monkeypatch.setattr(auth.httpx, "get", fake_get)
+
+    assert auth._pick_best_token([good]) == good
+
+
+def test_pick_best_token_me_endpoint_debug(monkeypatch, capsys):
+    def fake_get(url, headers, timeout):
+        if url.endswith("/me"):
+            return types.SimpleNamespace(status_code=200)
+        return types.SimpleNamespace(status_code=404)
+
+    monkeypatch.setattr(auth.httpx, "get", fake_get)
+
+    auth._pick_best_token(["only-token"], debug=True)
+    assert "no mail access though" in capsys.readouterr().out
+
+
+def test_pick_best_token_me_endpoint_http_error(monkeypatch):
+    calls = {"n": 0}
+
+    def fake_get(url, headers, timeout):
+        calls["n"] += 1
+        if "messages" in url:
+            return types.SimpleNamespace(status_code=404)
+        raise auth.httpx.HTTPError("boom")
+
+    monkeypatch.setattr(auth.httpx, "get", fake_get)
+
+    assert auth._pick_best_token(["short", "longest-token"]) == "longest-token"
+
+
+def test_decode_audience_handles_short_and_bad_tokens():
+    assert auth._decode_audience("nodot") == "unknown"
+    assert auth._decode_audience("bad.$$$.sig") == "unknown"
+
+
+def test_decode_exp_handles_short_and_bad_tokens(monkeypatch):
+    monkeypatch.setattr(auth.time, "time", lambda: 1000.0)
+    assert auth._decode_exp("nodot") == 1000.0 + 3600
+    assert auth._decode_exp("bad.$$$.sig") == 1000.0 + 3600
+
+
+def test_delete_stored_token_removes_secret(monkeypatch, tmp_path):
+    _patch_account(monkeypatch, tmp_path)
+    store = _patch_keyring(monkeypatch)
+    monkeypatch.setattr(
+        auth.account_service,
+        "resolve_account_name",
+        lambda account_name=None, allow_missing=False: account_name or "default",
+    )
+    store[(auth.KEYRING_SERVICE_NAME, auth._keyring_username("default"))] = "secret"
+
+    auth.delete_stored_token()
+
+    assert (auth.KEYRING_SERVICE_NAME, auth._keyring_username("default")) not in store
+
+
+def test_delete_stored_token_ignores_missing(monkeypatch, tmp_path):
+    _patch_account(monkeypatch, tmp_path)
+    _patch_keyring(monkeypatch)
+    monkeypatch.setattr(
+        auth.account_service,
+        "resolve_account_name",
+        lambda account_name=None, allow_missing=False: "default",
+    )
+    # No secret stored -> PasswordDeleteError swallowed
+    auth.delete_stored_token()
+
+
+def test_delete_stored_token_wraps_unexpected_error(monkeypatch, tmp_path):
+    _patch_account(monkeypatch, tmp_path)
+    _patch_keyring(monkeypatch)
+    monkeypatch.setattr(
+        auth.account_service,
+        "resolve_account_name",
+        lambda account_name=None, allow_missing=False: "default",
+    )
+    monkeypatch.setattr(auth, "_clear_token_chunks", lambda name: None)
+
+    def boom(service, username):
+        raise RuntimeError("keyring down")
+
+    monkeypatch.setattr(auth.keyring, "delete_password", boom)
+
+    with pytest.raises(AccountError, match="Could not delete stored token"):
+        auth.delete_stored_token()
+
+
+def test_load_token_metadata_handles_missing_and_bad(tmp_path):
+    missing = tmp_path / "nope.json"
+    assert auth._load_token_metadata(missing) is None
+
+    bad = tmp_path / "bad.json"
+    bad.write_text("{not json")
+    assert auth._load_token_metadata(bad) is None
+
+    good = tmp_path / "good.json"
+    good.write_text(json.dumps({"a": 1}))
+    assert auth._load_token_metadata(good) == {"a": 1}
+
+
+def test_store_and_load_chunked_token(monkeypatch):
+    _patch_keyring(monkeypatch)
+    big = "T" * (auth._SECRET_CHUNK_SIZE * 3 + 5)
+
+    auth._store_token_secret("default", big)
+    marker = auth._get_secret(auth._keyring_username("default"))
+    assert marker.startswith(auth._CHUNK_MARKER_PREFIX)
+
+    assert auth._load_token_secret("default") == big
+
+
+def test_store_token_secret_rejects_oversized(monkeypatch):
+    _patch_keyring(monkeypatch)
+    monkeypatch.setattr(auth, "_MAX_SECRET_CHUNKS", 2)
+    big = "T" * (auth._SECRET_CHUNK_SIZE * 3)
+
+    with pytest.raises(AccountError, match="too large to store"):
+        auth._store_token_secret("default", big)
+
+
+def test_store_token_secret_wraps_keyring_error(monkeypatch):
+    _patch_keyring(monkeypatch)
+    monkeypatch.setattr(auth, "_clear_token_chunks", lambda name: None)
+
+    def boom(username, value):
+        raise RuntimeError("no keyring")
+
+    monkeypatch.setattr(auth, "_set_secret", boom)
+
+    with pytest.raises(AccountError, match="Check keyring availability"):
+        auth._store_token_secret("default", "small")
+
+
+def test_load_token_secret_missing_raises(monkeypatch):
+    _patch_keyring(monkeypatch)
+    with pytest.raises(AccountError, match="not found in the keyring"):
+        auth._load_token_secret("default")
+
+
+def test_load_token_secret_missing_chunk_raises(monkeypatch):
+    _patch_keyring(monkeypatch)
+    auth._set_secret(auth._keyring_username("default"), f"{auth._CHUNK_MARKER_PREFIX}3")
+    auth._set_secret(auth._keyring_chunk_username("default", 1), "part1")
+    # chunk 2 and 3 missing -> stored becomes None -> raises
+    with pytest.raises(AccountError, match="not found in the keyring"):
+        auth._load_token_secret("default")
+
+
+def test_load_token_secret_wraps_read_error(monkeypatch):
+    _patch_keyring(monkeypatch)
+
+    def boom(username):
+        raise RuntimeError("keyring read fail")
+
+    monkeypatch.setattr(auth, "_get_secret", boom)
+
+    with pytest.raises(AccountError, match="Could not read stored token"):
+        auth._load_token_secret("default")
+
+
+def test_clear_token_chunks_removes_chunk_entries(monkeypatch):
+    store = _patch_keyring(monkeypatch)
+    auth._set_secret(auth._keyring_username("default"), f"{auth._CHUNK_MARKER_PREFIX}2")
+    auth._set_secret(auth._keyring_chunk_username("default", 1), "a")
+    auth._set_secret(auth._keyring_chunk_username("default", 2), "b")
+
+    auth._clear_token_chunks("default")
+
+    assert (auth.KEYRING_SERVICE_NAME, auth._keyring_chunk_username("default", 1)) not in store
+    assert (auth.KEYRING_SERVICE_NAME, auth._keyring_chunk_username("default", 2)) not in store
+
+
+def test_clear_token_chunks_noop_without_marker(monkeypatch):
+    _patch_keyring(monkeypatch)
+    auth._set_secret(auth._keyring_username("default"), "plain-token")
+    # Should not raise and should not attempt chunk deletes
+    auth._clear_token_chunks("default")
+
+
+def test_clear_token_chunks_handles_bad_count(monkeypatch):
+    _patch_keyring(monkeypatch)
+    auth._set_secret(auth._keyring_username("default"), f"{auth._CHUNK_MARKER_PREFIX}notanumber")
+    # ValueError branch -> falls back to _MAX_SECRET_CHUNKS iterations, no error
+    auth._clear_token_chunks("default")
+
+
+def test_get_me_for_token_returns_json(monkeypatch):
+    monkeypatch.setattr(
+        auth.httpx,
+        "get",
+        lambda *a, **k: types.SimpleNamespace(status_code=200, json=lambda: {"Id": "m-1"}),
+    )
+    assert auth._get_me_for_token("tok") == {"Id": "m-1"}
+
+
+def test_get_me_for_token_raises_on_401(monkeypatch):
+    from outlook_cli.exceptions import TokenExpiredError
+
+    monkeypatch.setattr(
+        auth.httpx, "get", lambda *a, **k: types.SimpleNamespace(status_code=401)
+    )
+    with pytest.raises(TokenExpiredError):
+        auth._get_me_for_token("tok")
+
+
+def test_get_me_for_token_raises_on_other_status(monkeypatch):
+    monkeypatch.setattr(
+        auth.httpx, "get", lambda *a, **k: types.SimpleNamespace(status_code=500)
+    )
+    with pytest.raises(AccountError, match="HTTP 500"):
+        auth._get_me_for_token("tok")
+
+
+def test_get_me_for_token_raises_on_http_error(monkeypatch):
+    def boom(*a, **k):
+        raise auth.httpx.HTTPError("network")
+
+    monkeypatch.setattr(auth.httpx, "get", boom)
+    with pytest.raises(AccountError, match="Could not verify mailbox"):
+        auth._get_me_for_token("tok")
+
+
+def test_assert_token_matches_account_unbound_returns_empty(monkeypatch, tmp_path):
+    _patch_account(monkeypatch, tmp_path)  # get_account returns no mailbox_id
+    assert auth._assert_token_matches_account("tok", "default", source="env") == {}
+
+
+def test_assert_token_matches_account_success(monkeypatch, tmp_path):
+    _patch_account(monkeypatch, tmp_path, bound={"mailbox_id": "m-1"})
+    monkeypatch.setattr(auth, "_get_me_for_token", lambda t: {"Id": "m-1", "EmailAddress": "a@example.com"})
+
+    result = auth._assert_token_matches_account("tok", "default", source="env")
+    assert result["mailbox_id"] == "m-1"
+
+
+def test_assert_token_matches_account_wrong_mailbox(monkeypatch, tmp_path):
+    _patch_account(monkeypatch, tmp_path, bound={"mailbox_id": "m-1"})
+    monkeypatch.setattr(auth, "_get_me_for_token", lambda t: {"Id": "other"})
+    monkeypatch.setattr(
+        auth.account_service,
+        "assert_mailbox_matches",
+        lambda account_name, me: (_ for _ in ()).throw(AccountError("mismatch")),
+    )
+
+    with pytest.raises(AccountError, match="belongs to the wrong mailbox"):
+        auth._assert_token_matches_account("tok", "default", source="OUTLOOK_TOKEN")
+
+
+def test_chmod_600_swallows_oserror(monkeypatch, tmp_path):
+    target = tmp_path / "f.json"
+    target.write_text("{}")
+
+    def boom(mode):
+        raise OSError("no chmod on this fs")
+
+    monkeypatch.setattr(Path, "chmod", lambda self, mode: boom(mode))
+    # Should not raise
+    auth._chmod_600(target)
+
+
+def test_load_cached_token_asserts_when_no_mailbox_metadata(monkeypatch, tmp_path):
+    paths = _patch_account(monkeypatch, tmp_path)
+    store = _patch_keyring(monkeypatch)
+    monkeypatch.setattr(auth.time, "time", lambda: 1_000)
+    calls = []
+    monkeypatch.setattr(auth, "_assert_token_matches_account", lambda *a, **k: calls.append(a))
+
+    store[(auth.KEYRING_SERVICE_NAME, auth._keyring_username("default"))] = "cached"
+    paths.token_file.write_text(
+        json.dumps({"storage_backend": "keyring", "storage_version": 1, "expires_at": 2_000})
+    )
+
+    assert auth._load_cached_token() == "cached"
+    assert calls  # _assert_token_matches_account exercised (no mailbox metadata path)
+
+
+def test_load_cached_token_asserts_mailbox_when_metadata_present(monkeypatch, tmp_path):
+    paths = _patch_account(monkeypatch, tmp_path)
+    store = _patch_keyring(monkeypatch)
+    monkeypatch.setattr(auth.time, "time", lambda: 1_000)
+    matches = []
+    monkeypatch.setattr(
+        auth.account_service,
+        "assert_mailbox_matches",
+        lambda account_name, cached: matches.append(cached),
+    )
+
+    store[(auth.KEYRING_SERVICE_NAME, auth._keyring_username("default"))] = "cached"
+    paths.token_file.write_text(
+        json.dumps(
+            {
+                "storage_backend": "keyring",
+                "storage_version": 1,
+                "expires_at": 2_000,
+                "mailbox_id": "m-1",
+                "email": "a@example.com",
+            }
+        )
+    )
+
+    assert auth._load_cached_token() == "cached"
+    assert matches and matches[0]["mailbox_id"] == "m-1"
+
+
+def test_load_cached_token_returns_none_when_file_missing(monkeypatch, tmp_path):
+    _patch_account(monkeypatch, tmp_path)  # token_file points at nonexistent path
+    assert auth._load_cached_token() is None

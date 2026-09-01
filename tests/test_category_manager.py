@@ -181,3 +181,243 @@ def test_recolor_category_delegates_to_update(monkeypatch):
 
     assert result == {"ok": True}
     update.assert_called_once_with("token", change_color=[{"Name": "Finance", "Color": 7}])
+
+
+def test_create_category_adds_master_entry(monkeypatch):
+    update = MagicMock(return_value={"ok": True})
+    monkeypatch.setattr(cm, "_update_master_categories", update)
+
+    result = cm.create_category("token", "Finance", color=7)
+
+    assert result == {"ok": True}
+    kwargs = update.call_args
+    assert kwargs.args[0] == "token"
+    added = kwargs.kwargs["add"]
+    assert len(added) == 1
+    assert added[0]["Name"] == "Finance"
+    assert added[0]["Color"] == 7
+    assert "Id" in added[0]
+    assert added[0]["LastTimeUsed"].endswith("Z")
+
+
+def test_delete_category_removes_by_name(monkeypatch):
+    update = MagicMock(return_value={"ok": True})
+    monkeypatch.setattr(cm, "_update_master_categories", update)
+
+    result = cm.delete_category("token", "Finance")
+
+    assert result == {"ok": True}
+    update.assert_called_once_with("token", remove=["Finance"])
+
+
+def test_rename_category_propagates_to_messages(monkeypatch):
+    monkeypatch.setattr(
+        cm, "get_master_categories", lambda _token: [{"Name": "Old", "Id": "1", "Color": 5}]
+    )
+    monkeypatch.setattr(cm, "_update_master_categories", MagicMock())
+    bulk = MagicMock(return_value=42)
+    monkeypatch.setattr(cm, "_bulk_rename_on_messages", bulk)
+
+    count = cm.rename_category("token", "Old", "New")
+
+    assert count == 42
+    bulk.assert_called_once_with("token", "Old", "New", None)
+
+
+def test_bulk_rename_stops_on_non_200_get(monkeypatch):
+    monkeypatch.setattr(cm.time, "sleep", lambda _s: None)
+
+    class FakeClient:
+        def get(self, url, params=None):
+            return _Resp(status_code=500)
+
+        def patch(self, url, json=None):
+            raise AssertionError("patch should not be called")
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr(cm.httpx, "Client", lambda *args, **kwargs: FakeClient())
+
+    assert cm._bulk_rename_on_messages("token", "Old", "New") == 0
+
+
+def test_bulk_rename_gives_up_after_patch_errors(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr(cm.time, "sleep", lambda s: sleeps.append(s))
+    progress = []
+
+    class FakeClient:
+        def __init__(self):
+            self.get_responses = [
+                _Resp(payload={"value": [{"Id": "m1", "Categories": ["Old"]}]}),
+                _Resp(payload={"value": []}),
+            ]
+            self.patch_calls = 0
+
+        def get(self, url, params=None):
+            return self.get_responses.pop(0)
+
+        def patch(self, url, json=None):
+            self.patch_calls += 1
+            return _Resp(status_code=500)
+
+        def close(self):
+            return None
+
+    fake = FakeClient()
+    monkeypatch.setattr(cm.httpx, "Client", lambda *args, **kwargs: fake)
+
+    count = cm._bulk_rename_on_messages(
+        "token", "Old", "New", on_progress=lambda done, total: progress.append((done, total))
+    )
+
+    assert count == 0
+    assert fake.patch_calls == 3
+    assert sleeps == [2, 2, 2]
+    assert progress == [(0, -1)]
+
+
+def test_clear_category_retries_on_429_get(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr(cm.time, "sleep", lambda s: sleeps.append(s))
+
+    class FakeClient:
+        def __init__(self):
+            self.get_responses = [
+                _Resp(status_code=429, headers={"Retry-After": "2"}),
+                _Resp(payload={"value": [{"Id": "m1", "Categories": ["Old"]}]}),
+                _Resp(payload={"value": []}),
+            ]
+
+        def get(self, url, params=None):
+            return self.get_responses.pop(0)
+
+        def patch(self, url, json=None):
+            return _Resp(payload={})
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr(cm.httpx, "Client", lambda *args, **kwargs: FakeClient())
+
+    count = cm.clear_category("token", "Old")
+
+    assert count == 1
+    assert sleeps == [2]
+
+
+def test_clear_category_stops_on_non_200_get(monkeypatch):
+    class FakeClient:
+        def get(self, url, params=None):
+            return _Resp(status_code=500)
+
+        def patch(self, url, json=None):
+            raise AssertionError("patch should not be called")
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr(cm.httpx, "Client", lambda *args, **kwargs: FakeClient())
+
+    assert cm.clear_category("token", "Old") == 0
+
+
+def test_clear_category_retries_patch_429_and_timeout(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr(cm.time, "sleep", lambda s: sleeps.append(s))
+
+    class FakeClient:
+        def __init__(self):
+            self.get_responses = [
+                _Resp(payload={"value": [{"Id": "m1", "Categories": ["Old", "Keep"]}]}),
+                _Resp(payload={"value": []}),
+            ]
+            self.patch_responses = [
+                _Resp(status_code=429, headers={"Retry-After": "4"}),
+                httpx.ReadTimeout("slow"),
+                _Resp(payload={}),
+            ]
+
+        def get(self, url, params=None):
+            return self.get_responses.pop(0)
+
+        def patch(self, url, json=None):
+            resp = self.patch_responses.pop(0)
+            if isinstance(resp, Exception):
+                raise resp
+            return resp
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr(cm.httpx, "Client", lambda *args, **kwargs: FakeClient())
+
+    count = cm.clear_category("token", "Old")
+
+    assert count == 1
+    assert sleeps == [4, 3]
+
+
+def test_bulk_rename_retries_patch_on_429(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr(cm.time, "sleep", lambda s: sleeps.append(s))
+
+    class FakeClient:
+        def __init__(self):
+            self.get_responses = [
+                _Resp(payload={"value": [{"Id": "m1", "Categories": ["Old"]}]}),
+                _Resp(payload={"value": []}),
+            ]
+            self.patch_responses = [
+                _Resp(status_code=429, headers={"Retry-After": "6"}),
+                _Resp(payload={}),
+            ]
+
+        def get(self, url, params=None):
+            return self.get_responses.pop(0)
+
+        def patch(self, url, json=None):
+            return self.patch_responses.pop(0)
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr(cm.httpx, "Client", lambda *args, **kwargs: FakeClient())
+
+    count = cm._bulk_rename_on_messages("token", "Old", "New")
+
+    assert count == 1
+    assert sleeps == [6]
+
+
+def test_clear_category_retries_patch_on_server_error(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr(cm.time, "sleep", lambda s: sleeps.append(s))
+
+    class FakeClient:
+        def __init__(self):
+            self.get_responses = [
+                _Resp(payload={"value": [{"Id": "m1", "Categories": ["Old"]}]}),
+                _Resp(payload={"value": []}),
+            ]
+            self.patch_responses = [
+                _Resp(status_code=500),
+                _Resp(payload={}),
+            ]
+
+        def get(self, url, params=None):
+            return self.get_responses.pop(0)
+
+        def patch(self, url, json=None):
+            return self.patch_responses.pop(0)
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr(cm.httpx, "Client", lambda *args, **kwargs: FakeClient())
+
+    count = cm.clear_category("token", "Old")
+
+    assert count == 1
+    assert sleeps == [2]

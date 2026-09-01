@@ -158,3 +158,75 @@ class TestDateBoundaryLogic:
         assert (midnight_plus_8 - start_plus_8).days == 1
         assert (midnight_utc - start_utc).days == 1
         assert (midnight_minus_5 - start_minus_5).days == 1
+
+
+class TestResolveOutputTz:
+    """Test _resolve_output_tz precedence: flag > config > None."""
+
+    def test_flag_takes_precedence(self):
+        tz = calendar_cmd._resolve_output_tz("UTC+8")
+        assert tz == timezone(timedelta(hours=8))
+
+    def test_flag_utc(self):
+        tz = calendar_cmd._resolve_output_tz("UTC")
+        assert tz == timezone.utc
+
+    def test_falls_back_to_config(self, monkeypatch):
+        monkeypatch.setattr(calendar_cmd.cfg, "get", lambda key, default=None: "UTC-5")
+        tz = calendar_cmd._resolve_output_tz(None)
+        assert tz == timezone(timedelta(hours=-5))
+
+    def test_config_utc_returns_none(self, monkeypatch):
+        monkeypatch.setattr(calendar_cmd.cfg, "get", lambda key, default=None: "UTC")
+        assert calendar_cmd._resolve_output_tz(None) is None
+
+    def test_no_flag_no_config_returns_none(self, monkeypatch):
+        monkeypatch.setattr(calendar_cmd.cfg, "get", lambda key, default=None: default)
+        assert calendar_cmd._resolve_output_tz(None) is None
+
+
+class TestParseTimezoneEdgeCases:
+    """Cover the IANA / dateutil fallback and error branches."""
+
+    def test_iana_unknown_name_raises(self):
+        # A syntactically valid but non-existent IANA name -> zoneinfo raises,
+        # caught and re-raised as BadParameter.
+        with pytest.raises(Exception):
+            calendar_cmd._parse_timezone("Not/AReal_Zone")
+
+    def test_dateutil_fallback_when_zoneinfo_missing(self, monkeypatch):
+        # Force the zoneinfo import to fail so the dateutil branch runs.
+        import builtins
+
+        real_import = builtins.__import__
+
+        def fake_import(name, *args, **kwargs):
+            if name == "zoneinfo":
+                raise ImportError("no zoneinfo")
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", fake_import)
+
+        try:
+            import dateutil  # noqa: F401
+        except ImportError:
+            pytest.skip("python-dateutil not installed")
+
+        tz = calendar_cmd._parse_timezone("America/New_York")
+        assert tz is not None
+
+    def test_no_backend_raises_bad_parameter(self, monkeypatch):
+        # Both zoneinfo and dateutil unavailable -> BadParameter.
+        import builtins
+
+        real_import = builtins.__import__
+
+        def fake_import(name, *args, **kwargs):
+            if name in ("zoneinfo", "dateutil"):
+                raise ImportError(f"no {name}")
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", fake_import)
+
+        with pytest.raises(Exception):
+            calendar_cmd._parse_timezone("Europe/Berlin")

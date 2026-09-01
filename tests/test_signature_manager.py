@@ -141,3 +141,69 @@ def test_append_signature_converts_plain_text_to_html():
     assert body.startswith("<html><body")
     assert "Hello<br>World" in body
     assert "<b>Sig</b>" in body
+
+
+def test_list_signatures_returns_empty_when_dir_missing(monkeypatch, tmp_path):
+    missing = tmp_path / "no-such-dir"
+    paths = AccountPaths("default", missing, missing, missing / "token.json", missing / "browser-state.json", missing / "id_map.json", missing / "scheduled.json", missing, missing / "config.yaml")
+    monkeypatch.setattr(sm.account_service, "resolve_account_name", lambda account_name=None: "default")
+    monkeypatch.setattr(sm.account_service, "get_account_paths", lambda account_name: paths)
+
+    assert sm.list_signatures() == []
+
+
+def test_delete_signature_raises_for_missing_file(monkeypatch, tmp_path):
+    paths = AccountPaths("default", tmp_path, tmp_path, tmp_path / "token.json", tmp_path / "browser-state.json", tmp_path / "id_map.json", tmp_path / "scheduled.json", tmp_path, tmp_path / "config.yaml")
+    monkeypatch.setattr(sm.account_service, "resolve_account_name", lambda account_name=None: "default")
+    monkeypatch.setattr(sm.account_service, "get_account_paths", lambda account_name: paths)
+
+    with pytest.raises(ResourceNotFoundError):
+        sm.delete_signature("missing")
+
+
+def test_pull_signature_stops_on_non_200_response(monkeypatch):
+    class FakeClient:
+        def get(self, *_args, **_kwargs):
+            return _Resp(status_code=500, payload={"value": []})
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr(sm.httpx, "Client", lambda *args, **kwargs: FakeClient())
+
+    with pytest.raises(ResourceNotFoundError):
+        sm.pull_signature("token")
+
+
+def test_extract_signature_returns_none_when_mailto_present_but_no_table():
+    # mailto exists in the body but there are no <table> blocks to extract
+    html = '<div><a href="mailto:test@example.com">Mail</a></div>'
+
+    assert sm._extract_signature(html) is None
+
+
+def test_extract_signature_returns_none_when_no_table_contains_mailto():
+    # mailto lives outside any table; the only table lacks it → best stays None
+    html = '<div><a href="mailto:test@example.com">Mail</a></div><table><tr><td>no link</td></tr></table>'
+
+    assert sm._extract_signature(html) is None
+
+
+def test_extract_signature_returns_none_for_too_short_table():
+    # Table contains mailto but is shorter than the 100-char substance threshold
+    html = '<table><a href="mailto:a@b.com">M</a></table>'
+
+    assert sm._extract_signature(html) is None
+
+
+def test_extract_balanced_table_returns_none_when_unbalanced():
+    html = "<table><tr><td>never closed"
+
+    assert sm._extract_balanced_table(html, 0) is None
+
+
+def test_append_signature_appends_at_end_without_closing_tags():
+    body, is_html = sm.append_signature("<p>Hello</p>", "<b>Sig</b>", True)
+
+    assert is_html is True
+    assert body == '<p>Hello</p><br><div id="Signature"><b>Sig</b><br></div>'

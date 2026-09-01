@@ -58,7 +58,7 @@ def _parse_timezone(tz_str: str | None):
     except (ImportError, AttributeError):
         try:
             from dateutil import tz
-            return tz.gettz(tz_str)
+            return tz.gettz(tz_str)  # pragma: no cover - optional python-dateutil fallback, not a project dependency
         except ImportError:
             raise click.BadParameter(
                 f"Unknown timezone: {tz_str}. Install python-dateutil for IANA timezone support."

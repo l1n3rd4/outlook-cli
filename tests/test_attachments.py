@@ -269,3 +269,97 @@ class TestFormatFileSize:
     def test_megabytes(self):
         from outlook_cli.commands.mail import _format_file_size
         assert _format_file_size(3 * 1024 * 1024) == "3.0 MB"
+
+
+# ── attachments command: filename safety + command branches ──
+
+
+from outlook_cli.commands import attachments as attachments_cmd
+
+
+class TestSanitizeFilename:
+    def test_strips_path_components(self):
+        assert attachments_cmd._sanitize_filename("../../.ssh/authorized_keys") == "authorized_keys"
+
+    def test_replaces_windows_unsafe_chars(self):
+        assert attachments_cmd._sanitize_filename('a<b>c:"d.txt') == "a_b_c__d.txt"
+
+    def test_backslash_path_reduced_to_basename(self):
+        assert attachments_cmd._sanitize_filename(r"C:\Windows\System32\x") == "x"
+
+    def test_dot_names_are_unusable(self):
+        assert attachments_cmd._sanitize_filename("..") == ""
+        assert attachments_cmd._sanitize_filename(".") == ""
+        assert attachments_cmd._sanitize_filename("   ") == ""
+
+
+class TestResolveDownloadPath:
+    def test_resolves_within_save_dir(self, tmp_path):
+        dest = attachments_cmd._resolve_download_path(tmp_path, "report.pdf")
+        assert dest.parent == tmp_path.resolve()
+        assert dest.name == "report.pdf"
+
+    def test_rejects_unusable_name(self, tmp_path):
+        with pytest.raises(ValueError, match="unsafe attachment name"):
+            attachments_cmd._resolve_download_path(tmp_path, "..")
+
+
+class TestAttachmentsCommand:
+    def test_no_attachments_reports_and_returns(self, runner, tty_mode, monkeypatch):
+        fake = type("C", (), {"get_attachments": lambda self, mid: []})()
+        monkeypatch.setattr(attachments_cmd, "_get_client", lambda: fake)
+        messages = []
+        monkeypatch.setattr(attachments_cmd, "print_success", lambda msg: messages.append(msg))
+
+        result = runner.invoke(attachments_cmd.attachments, ["1"])
+
+        assert result.exit_code == 0
+        assert messages == ["No attachments."]
+
+    def test_json_output_lists_attachments(self, runner, tty_mode, monkeypatch, make_attachment):
+        fake = type("C", (), {"get_attachments": lambda self, mid: [make_attachment(name="a.pdf")]})()
+        monkeypatch.setattr(attachments_cmd, "_get_client", lambda: fake)
+
+        result = runner.invoke(attachments_cmd.attachments, ["1", "--json"])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert payload["data"][0]["name"] == "a.pdf"
+
+    def test_download_skips_empty_remote_content(self, runner, tty_mode, monkeypatch, tmp_path, make_attachment):
+        remote = make_attachment(id="att-2", name="remote.txt", content_bytes=None)
+
+        class FakeClient:
+            def get_attachments(self, mid):
+                return [remote]
+
+            def download_attachment(self, mid, att_id):
+                # Empty content -> download loop should `continue` and write nothing.
+                return make_attachment(id=att_id, name="remote.txt", content_bytes=None)
+
+        monkeypatch.setattr(attachments_cmd, "_get_client", lambda: FakeClient())
+        monkeypatch.setattr(attachments_cmd, "print_attachments", lambda atts: None)
+
+        result = runner.invoke(attachments_cmd.attachments, ["1", "--download", "--save-to", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert list(tmp_path.iterdir()) == []
+
+    def test_download_skips_unsafe_names(self, runner, tty_mode, monkeypatch, tmp_path):
+        unsafe = base64.b64encode(b"payload").decode()
+        att = type("A", (), {"id": "att-1", "name": "..", "content_bytes": unsafe})()
+
+        class FakeClient:
+            def get_attachments(self, mid):
+                return [att]
+
+        monkeypatch.setattr(attachments_cmd, "_get_client", lambda: FakeClient())
+        monkeypatch.setattr(attachments_cmd, "print_attachments", lambda atts: None)
+        errors = []
+        monkeypatch.setattr(attachments_cmd, "print_error", lambda msg: errors.append(msg))
+
+        result = runner.invoke(attachments_cmd.attachments, ["1", "--download", "--save-to", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert list(tmp_path.iterdir()) == []
+        assert any("unsafe attachment name" in e for e in errors)

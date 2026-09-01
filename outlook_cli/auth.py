@@ -19,6 +19,14 @@ from .exceptions import AccountError, AuthRequiredError, TokenExpiredError
 TOKEN_STORAGE_BACKEND = "keyring"
 TOKEN_STORAGE_VERSION = 1
 
+# Windows Credential Manager caps a credential blob at 2560 bytes, and the
+# backend stores secrets as UTF-16 (2 bytes per BMP char), leaving ~1280 usable
+# characters. OWA bearer tokens routinely exceed that, so long secrets are split
+# across numbered keyring entries.
+_SECRET_CHUNK_SIZE = 1000
+_CHUNK_MARKER_PREFIX = "\x00outlook-cli-chunks:"
+_MAX_SECRET_CHUNKS = 64
+
 
 def get_token(account_name: str | None = None) -> str:
     """Return a valid bearer token for the selected account."""
@@ -119,7 +127,7 @@ def login(
             except Exception:
                 break
 
-            if not captured_token and time.time() > deadline - 95:
+            if not captured_token and time.time() > deadline - 95:  # pragma: no cover - live browser session: wall-clock polling nudge against a real OWA page
                 try:
                     page.evaluate(
                         """
@@ -295,10 +303,11 @@ def _save_token(token: str, account_name: str | None = None, mailbox_info: dict[
 def delete_stored_token(account_name: str | None = None) -> None:
     selected = account_service.resolve_account_name(account_name, allow_missing=True)
     try:
+        _clear_token_chunks(selected)
         keyring.delete_password(KEYRING_SERVICE_NAME, _keyring_username(selected))
     except keyring.errors.PasswordDeleteError:
         pass
-    except keyring.errors.KeyringError as exc:
+    except Exception as exc:
         raise AccountError(f"Could not delete stored token for account '{selected}': {exc}") from exc
 
 
@@ -315,10 +324,49 @@ def _keyring_username(account_name: str) -> str:
     return f"token:{account_name}"
 
 
-def _store_token_secret(account_name: str, token: str) -> None:
+def _keyring_chunk_username(account_name: str, index: int) -> str:
+    return f"token:{account_name}#{index}"
+
+
+def _set_secret(username: str, value: str) -> None:
+    keyring.set_password(KEYRING_SERVICE_NAME, username, value)
+
+
+def _get_secret(username: str) -> str | None:
+    return keyring.get_password(KEYRING_SERVICE_NAME, username)
+
+
+def _delete_secret(username: str) -> None:
     try:
-        keyring.set_password(KEYRING_SERVICE_NAME, _keyring_username(account_name), token)
-    except keyring.errors.KeyringError as exc:
+        keyring.delete_password(KEYRING_SERVICE_NAME, username)
+    except keyring.errors.PasswordDeleteError:
+        pass
+
+
+def _chunk(token: str) -> list[str]:
+    return [token[i : i + _SECRET_CHUNK_SIZE] for i in range(0, len(token), _SECRET_CHUNK_SIZE)]
+
+
+def _store_token_secret(account_name: str, token: str) -> None:
+    base_username = _keyring_username(account_name)
+    try:
+        _clear_token_chunks(account_name)
+        if len(token) <= _SECRET_CHUNK_SIZE:
+            _set_secret(base_username, token)
+            return
+
+        chunks = _chunk(token)
+        if len(chunks) > _MAX_SECRET_CHUNKS:
+            raise AccountError(
+                f"Token for account '{account_name}' is too large to store securely "
+                f"({len(token)} characters)."
+            )
+        for index, part in enumerate(chunks, start=1):
+            _set_secret(_keyring_chunk_username(account_name, index), part)
+        _set_secret(base_username, f"{_CHUNK_MARKER_PREFIX}{len(chunks)}")
+    except AccountError:
+        raise
+    except Exception as exc:
         raise AccountError(
             f"Could not store token securely for account '{account_name}'. Check keyring availability."
         ) from exc
@@ -326,16 +374,40 @@ def _store_token_secret(account_name: str, token: str) -> None:
 
 def _load_token_secret(account_name: str) -> str:
     try:
-        token = keyring.get_password(KEYRING_SERVICE_NAME, _keyring_username(account_name))
-    except keyring.errors.KeyringError as exc:
+        stored = _get_secret(_keyring_username(account_name))
+        if stored and stored.startswith(_CHUNK_MARKER_PREFIX):
+            count = int(stored[len(_CHUNK_MARKER_PREFIX) :])
+            parts: list[str] = []
+            for index in range(1, count + 1):
+                part = _get_secret(_keyring_chunk_username(account_name, index))
+                if part is None:
+                    stored = None
+                    break
+                parts.append(part)
+            else:
+                stored = "".join(parts)
+    except Exception as exc:
         raise AccountError(
             f"Could not read stored token for account '{account_name}'. Check keyring availability."
         ) from exc
-    if not token:
+    if not stored:
         raise AccountError(
             f"Stored token for account '{account_name}' was not found in the keyring. Run: outlook login"
         )
-    return token
+    return stored
+
+
+def _clear_token_chunks(account_name: str) -> None:
+    """Remove any chunk entries left over from a previous store."""
+    stored = _get_secret(_keyring_username(account_name))
+    if not stored or not stored.startswith(_CHUNK_MARKER_PREFIX):
+        return
+    try:
+        count = int(stored[len(_CHUNK_MARKER_PREFIX) :])
+    except ValueError:
+        count = _MAX_SECRET_CHUNKS
+    for index in range(1, count + 1):
+        _delete_secret(_keyring_chunk_username(account_name, index))
 
 
 def _decode_exp(token: str) -> float:

@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from rich import box
 from rich.console import Console
+from rich.markup import escape as _esc
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -66,8 +67,8 @@ def print_inbox(messages: list[Email], category_colors: dict[str, int] | None = 
     for msg in messages:
         row = [
             str(msg.display_num),
-            _truncate(str(msg.sender), 25),
-            _truncate(msg.subject, 50),
+            _safe(_truncate(str(msg.sender), 25)),
+            _safe(_truncate(msg.subject, 50)),
         ]
         if show_categories:
             row.append(_category_text(msg.categories, category_colors or {}, max_len=20))
@@ -79,14 +80,14 @@ def print_inbox(messages: list[Email], category_colors: dict[str, int] | None = 
 
 def print_email(email: Email) -> None:
     header = (
-        f"[bold]From:[/bold] {email.sender}\n"
-        f"[bold]To:[/bold] {', '.join(str(r) for r in email.to)}\n"
+        f"[bold]From:[/bold] {_safe(email.sender)}\n"
+        f"[bold]To:[/bold] {_safe(', '.join(str(r) for r in email.to))}\n"
     )
     if email.cc:
-        header += f"[bold]Cc:[/bold] {', '.join(str(r) for r in email.cc)}\n"
+        header += f"[bold]Cc:[/bold] {_safe(', '.join(str(r) for r in email.cc))}\n"
     header += f"[bold]Date:[/bold] {email.received.strftime('%Y-%m-%d %H:%M')}\n"
     if email.categories:
-        header += f"[bold]Categories:[/bold] {', '.join(email.categories)}\n"
+        header += f"[bold]Categories:[/bold] {_safe(', '.join(email.categories))}\n"
     if email.flag_status == "flagged":
         flag_info = "Flagged"
         if email.flag_due and email.flag_due != datetime.min:
@@ -94,13 +95,13 @@ def print_email(email: Email) -> None:
         header += f"[bold]Flag:[/bold] {flag_info}\n"
     elif email.flag_status == "complete":
         header += "[bold]Flag:[/bold] Complete\n"
-    header += f"[bold]Subject:[/bold] {email.subject}"
+    header += f"[bold]Subject:[/bold] {_safe(email.subject)}"
 
     body = _html_to_text(email.body) if email.body_type == "HTML" else email.body
 
     console.print(Panel(header, title=f"Message #{email.display_num}", border_style="cyan"))
     console.print()
-    console.print(body)
+    console.print(body, markup=False)
 
 
 def print_thread(messages: list[Email]) -> None:
@@ -112,17 +113,21 @@ def print_thread(messages: list[Email]) -> None:
         date = email.received.strftime("%Y-%m-%d %H:%M")
         read_marker = "" if email.is_read else " [bold cyan]*[/bold cyan]"
 
-        header = f"[bold]#{email.display_num}[/bold]  [dim]{date}[/dim]  {sender}{read_marker}"
+        header = f"[bold]#{email.display_num}[/bold]  [dim]{date}[/dim]  {_safe(sender)}{read_marker}"
         console.print(header)
 
         body = _html_to_text(email.body) if email.body_type == "HTML" else email.body
         body = body.strip()
         if body:
             lines = body.split("\n")
-            if len(lines) > 20:
-                lines = lines[:20] + [f"  [dim]... ({len(lines) - 20} more lines)[/dim]"]
+            truncated = len(lines) > 20
+            if truncated:
+                extra = len(lines) - 20
+                lines = lines[:20]
             for line in lines:
-                console.print(f"  {line}")
+                console.print(f"  {line}", markup=False)
+            if truncated:
+                console.print(f"  [dim]... ({extra} more lines)[/dim]")
 
         if not is_last:
             console.print(f"  [dim]{'─' * 60}[/dim]")
@@ -130,7 +135,7 @@ def print_thread(messages: list[Email]) -> None:
 
 
 def print_email_raw(email: Email) -> None:
-    console.print(email.body)
+    console.print(email.body, markup=False)
 
 
 def print_folders(folders: list[Folder]) -> None:
@@ -143,7 +148,7 @@ def print_folders(folders: list[Folder]) -> None:
         prefix = "" if depth == 0 else f"{'  ' * (depth - 1)}└─ "
         style = "bold" if folder.unread_count > 0 else ""
         table.add_row(
-            f"{prefix}{folder.name}",
+            f"{prefix}{_safe(folder.name)}",
             _unread_badge(folder.unread_count),
             str(folder.total_count),
             style=style,
@@ -160,7 +165,7 @@ def print_attachments(attachments: list[Attachment]) -> None:
     table.add_column("Size", width=10, justify="right")
 
     for i, att in enumerate(attachments, 1):
-        table.add_row(str(i), att.name, att.content_type, _format_size(att.size))
+        table.add_row(str(i), _safe(att.name), _safe(att.content_type), _format_size(att.size))
 
     console.print(table)
 
@@ -181,8 +186,8 @@ def print_events(events: list[Event]) -> None:
             ev.start.strftime("%Y-%m-%d"),
             _event_time_text(ev),
             _response_icon(ev.response_status),
-            _truncate(ev.subject, 45),
-            _truncate(ev.location, 20),
+            _safe(_truncate(ev.subject, 45)),
+            _safe(_truncate(ev.location, 20)),
             str(len(ev.attendees)) if ev.attendees else "",
         )
 
@@ -190,26 +195,26 @@ def print_events(events: list[Event]) -> None:
 
 
 def print_event_detail(event: Event) -> None:
-    header = f"[bold]Subject:[/bold] {event.subject}\n"
+    header = f"[bold]Subject:[/bold] {_safe(event.subject)}\n"
     if event.is_all_day:
         header += f"[bold]When:[/bold] {event.start.strftime('%Y-%m-%d')} (All day)\n"
     else:
         header += f"[bold]Start:[/bold] {event.start.strftime('%Y-%m-%d %H:%M')}\n"
         header += f"[bold]End:[/bold] {event.end.strftime('%Y-%m-%d %H:%M')}\n"
     if event.location:
-        header += f"[bold]Location:[/bold] {event.location}\n"
-    header += f"[bold]Organizer:[/bold] {event.organizer}\n"
-    header += f"[bold]Show as:[/bold] {event.show_as}\n"
+        header += f"[bold]Location:[/bold] {_safe(event.location)}\n"
+    header += f"[bold]Organizer:[/bold] {_safe(event.organizer)}\n"
+    header += f"[bold]Show as:[/bold] {_safe(event.show_as)}\n"
     if event.is_online_meeting and event.online_meeting_url:
-        header += f"[bold]Online:[/bold] {event.online_meeting_url}\n"
+        header += f"[bold]Online:[/bold] {_safe(event.online_meeting_url)}\n"
     if event.categories:
-        header += f"[bold]Categories:[/bold] {', '.join(event.categories)}\n"
+        header += f"[bold]Categories:[/bold] {_safe(', '.join(event.categories))}\n"
     if event.response_status:
-        header += f"[bold]Your response:[/bold] {event.response_status}\n"
+        header += f"[bold]Your response:[/bold] {_safe(event.response_status)}\n"
     if event.recurrence:
-        header += f"[bold]Recurrence:[/bold] {_format_recurrence(event.recurrence)}\n"
+        header += f"[bold]Recurrence:[/bold] {_safe(_format_recurrence(event.recurrence))}\n"
     if event.event_type and event.event_type != "SingleInstance":
-        header += f"[bold]Type:[/bold] {event.event_type}\n"
+        header += f"[bold]Type:[/bold] {_safe(event.event_type)}\n"
     if event.is_cancelled:
         header += "[bold red]CANCELLED[/bold red]\n"
 
@@ -219,10 +224,10 @@ def print_event_detail(event: Event) -> None:
     if event.attendees:
         console.print(f"\n[bold]Attendees ({len(event.attendees)}):[/bold]")
         for att in event.attendees:
-            console.print(f"  {_attendee_response_icon(att)} {att.email}{_attendee_type_suffix(att)}")
+            console.print(f"  {_attendee_response_icon(att)} {_safe(att.email)}{_attendee_type_suffix(att)}")
 
     if event.body_preview:
-        console.print(f"\n{event.body_preview}")
+        console.print(f"\n{event.body_preview}", markup=False)
 
 
 def print_calendars(calendars: list[dict]) -> None:
@@ -235,7 +240,7 @@ def print_calendars(calendars: list[dict]) -> None:
     for cal in calendars:
         owner = cal.get("Owner", {}).get("Address", "")
         can_edit = "Yes" if cal.get("CanEdit") else "No"
-        table.add_row(cal.get("Name", ""), owner, cal.get("Color", ""), can_edit)
+        table.add_row(_safe(cal.get("Name", "")), _safe(owner), _safe(cal.get("Color", "")), can_edit)
 
     console.print(table)
 
@@ -257,8 +262,8 @@ def print_meeting_suggestions(suggestions: list[dict]) -> None:
         for attendee in suggestion.get("AttendeeAvailability", []):
             email = attendee.get("Attendee", {}).get("EmailAddress", {}).get("Address", "")
             avail = attendee.get("Availability", "?")
-            avail_parts.append(f"{email}={avail}")
-        table.add_row(str(i), start, end, confidence, "; ".join(avail_parts))
+            avail_parts.append(f"{_safe(email)}={_safe(avail)}")
+        table.add_row(str(i), _safe(start), _safe(end), confidence, "; ".join(avail_parts))
 
     console.print(table)
 
@@ -273,9 +278,9 @@ def print_people(people: list[dict]) -> None:
         emails = person.get("ScoredEmailAddresses", [])
         email = emails[0].get("Address", "") if emails else ""
         table.add_row(
-            person.get("DisplayName", ""),
-            email,
-            person.get("JobTitle", "") or "",
+            _safe(person.get("DisplayName", "")),
+            _safe(email),
+            _safe(person.get("JobTitle", "") or ""),
         )
 
     console.print(table)
@@ -290,7 +295,12 @@ def print_contacts(contacts: list[Contact]) -> None:
 
     for contact in contacts:
         email = contact.email_addresses[0].address if contact.email_addresses else ""
-        table.add_row(contact.display_name, email, contact.company, contact.job_title)
+        table.add_row(
+            _safe(contact.display_name),
+            _safe(email),
+            _safe(contact.company),
+            _safe(contact.job_title),
+        )
 
     console.print(table)
 
@@ -332,9 +342,9 @@ def print_accounts(rows: list[dict]) -> None:
             notes.append("unbound")
         table.add_row(
             ACTIVE_DOT if row.get("current") else INACTIVE_DOT,
-            row.get("name", ""),
-            row.get("email") or "N/A",
-            row.get("display_name") or "N/A",
+            _safe(row.get("name", "")),
+            _safe(row.get("email") or "N/A"),
+            _safe(row.get("display_name") or "N/A"),
             ", ".join(notes),
             style="bold" if row.get("current") else "",
         )
@@ -345,11 +355,11 @@ def print_accounts(rows: list[dict]) -> None:
 def print_whoami(data: dict, account_name: str | None = None) -> None:
     profile = account_name or data.get("AccountProfile")
     if profile:
-        console.print(f"[bold]Account:[/bold] {ACTIVE_DOT} {profile}")
+        console.print(f"[bold]Account:[/bold] {ACTIVE_DOT} {_safe(profile)}")
     console.print(f"[bold]Status:[/bold]  {ACTIVE_DOT} Connected")
-    console.print(f"[bold]Name:[/bold]    {data.get('DisplayName', 'N/A')}")
-    console.print(f"[bold]Email:[/bold]   {data.get('EmailAddress', 'N/A')}")
-    console.print(f"[bold]Alias:[/bold]   {data.get('Alias', 'N/A')}")
+    console.print(f"[bold]Name:[/bold]    {_safe(data.get('DisplayName', 'N/A'))}")
+    console.print(f"[bold]Email:[/bold]   {_safe(data.get('EmailAddress', 'N/A'))}")
+    console.print(f"[bold]Alias:[/bold]   {_safe(data.get('Alias', 'N/A'))}")
 
 
 def print_summary_dashboard(
@@ -372,8 +382,8 @@ def print_summary_dashboard(
         console.print("  [dim]Inbox is clear[/dim]")
     else:
         for msg in unread_messages[:5]:
-            sender = _truncate(msg.sender.name or msg.sender.address or "Unknown", 18)
-            subject = _truncate(msg.subject, 28)
+            sender = _safe(_truncate(msg.sender.name or msg.sender.address or "Unknown", 18))
+            subject = _safe(_truncate(msg.subject, 28))
             console.print(
                 f"  [bold cyan]*[/bold cyan] [dim]#{msg.display_num}[/dim] "
                 f"{sender}  {subject}  [dim]{_format_date(msg.received)}[/dim]"
@@ -385,16 +395,16 @@ def print_summary_dashboard(
         console.print("  [dim]No events today[/dim]")
     else:
         for event in today_events[:5]:
-            console.print(f"  {_summary_event_time(event)}  {_truncate(event.subject, 42)}")
+            console.print(f"  {_summary_event_time(event)}  {_safe(_truncate(event.subject, 42))}")
     console.print()
 
 
 def print_success(msg: str) -> None:
-    console.print(f"[green]{msg}[/green]")
+    console.print(f"[green]{_safe(msg)}[/green]")
 
 
 def print_error(msg: str) -> None:
-    console.print(f"[red]{msg}[/red]")
+    console.print(f"[red]{_safe(msg)}[/red]")
 
 
 def _table(*, pad_edge: bool = True) -> Table:
@@ -490,6 +500,17 @@ def _summary_event_time(event: Event) -> str:
     if event.is_all_day:
         return "[dim]All Day[/dim]"
     return f"[cyan]{event.start.strftime('%H:%M')}-{event.end.strftime('%H:%M')}[/cyan]"
+
+
+def _safe(value: object) -> str:
+    """Escape untrusted text so Rich markup inside mail content cannot alter output.
+
+    Senders, subjects, attachment names and event fields all come from remote
+    content, so a value like "[red]Verified[/red]" must render literally.
+    """
+    if value is None:
+        return ""
+    return _esc(str(value))
 
 
 def _truncate(s: str, max_len: int) -> str:

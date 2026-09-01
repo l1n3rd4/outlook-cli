@@ -10,6 +10,7 @@ from outlook_cli.exceptions import (
     EXIT_CODE_AUTH_REQUIRED,
     EXIT_CODE_CONFIG,
     EXIT_CODE_FAILURE,
+    EXIT_CODE_INTERRUPTED,
     EXIT_CODE_NOT_FOUND,
     EXIT_CODE_RATE_LIMITED,
     EXIT_CODE_RETRYABLE,
@@ -41,13 +42,24 @@ def test_exit_code_for_exception_known_mappings():
 
 def test_exit_code_for_exception_httpx_mappings():
     assert exit_code_for_exception(httpx.ReadTimeout("timeout")) == EXIT_CODE_RETRYABLE
+    assert exit_code_for_exception(_http_status_error(401)) == EXIT_CODE_AUTH_REQUIRED
     assert exit_code_for_exception(_http_status_error(404)) == EXIT_CODE_NOT_FOUND
     assert exit_code_for_exception(_http_status_error(429)) == EXIT_CODE_RATE_LIMITED
     assert exit_code_for_exception(_http_status_error(503)) == EXIT_CODE_RETRYABLE
     assert exit_code_for_exception(RuntimeError("boom")) == EXIT_CODE_FAILURE
 
 
+def test_exit_code_for_exception_keyboard_interrupt():
+    assert exit_code_for_exception(KeyboardInterrupt()) == EXIT_CODE_INTERRUPTED
+
+
+def test_exit_code_for_exception_generic_request_error():
+    # httpx.RequestError that is NOT a TimeoutException hits the RequestError branch.
+    assert exit_code_for_exception(httpx.ConnectError("down")) == EXIT_CODE_RETRYABLE
+
+
 def test_error_code_for_exception_httpx_mappings():
+    assert error_code_for_exception(_http_status_error(401)) == "session_expired"
     assert error_code_for_exception(_http_status_error(404)) == "not_found"
     assert error_code_for_exception(_http_status_error(429)) == "rate_limited"
     assert error_code_for_exception(_http_status_error(503)) == "retryable_error"

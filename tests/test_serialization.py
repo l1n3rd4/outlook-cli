@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 import tempfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+
+import pytest
 
 from outlook_cli.models import Email, EmailAddress, Folder
 from outlook_cli.serialization import error_json, save_json, to_json, to_json_envelope
@@ -95,3 +97,46 @@ class TestSaveJson:
         data = json.loads(open(path).read())
         assert "ok" not in data  # no envelope
         assert data["test"] is True
+
+
+class TestTimezoneConversion:
+    def test_envelope_tz_converts_aware_datetime_with_offset(self):
+        """Aware datetimes are converted to the target tz and emitted as ISO 8601 with offset."""
+        tz = timezone(timedelta(hours=2))
+        dt = datetime(2026, 3, 15, 10, 0, 0, tzinfo=timezone.utc)
+        result = json.loads(to_json_envelope({"when": dt}, tz=tz))
+        assert result["data"]["when"] == "2026-03-15T12:00:00+02:00"
+
+    def test_envelope_tz_leaves_naive_datetime_unchanged(self):
+        """Naive datetimes pass through untouched (no offset added)."""
+        tz = timezone(timedelta(hours=2))
+        dt = datetime(2026, 3, 15, 10, 0, 0)
+        result = json.loads(to_json_envelope({"when": dt}, tz=tz))
+        assert result["data"]["when"] == "2026-03-15T10:00:00"
+
+    def test_envelope_tz_non_datetime_uses_default_encoder(self):
+        """Non-datetime unserializable values hit the default encoder path and raise TypeError."""
+        tz = timezone(timedelta(hours=2))
+        with pytest.raises(TypeError):
+            to_json_envelope({"bad": {1, 2, 3}}, tz=tz)
+
+    def test_save_json_tz_converts_aware_datetime(self):
+        tz = timezone(timedelta(hours=-5))
+        dt = datetime(2026, 3, 15, 10, 0, 0, tzinfo=timezone.utc)
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="r") as f:
+            path = f.name
+        save_json({"when": dt}, path, tz=tz)
+        data = json.loads(open(path).read())
+        assert data["when"] == "2026-03-15T05:00:00-05:00"
+
+
+class TestDefaultEncoderPaths:
+    def test_to_json_non_datetime_default_raises(self):
+        """to_json uses _Encoder; unsupported types fall through to super().default and raise."""
+        with pytest.raises(TypeError):
+            to_json({"bad": {1, 2, 3}})
+
+    def test_envelope_normalizes_tuples_to_lists(self):
+        """Tuples are normalized into JSON lists."""
+        result = json.loads(to_json_envelope({"pair": (1, 2)}))
+        assert result["data"]["pair"] == [1, 2]
