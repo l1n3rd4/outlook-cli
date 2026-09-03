@@ -1,0 +1,392 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Create `services/__init__.py` and define `MailService` and `CategoryService` abstract interfaces": [
+      {
+        "executionId": "8454121f-56e5-4a91-b77c-8a57e8bbf326",
+        "chatSessionId": "sess_6c84deab-18ea-4fda-b215-ce7718d4a3ee",
+        "timestamp": 1788379909801
+      }
+    ],
+    "1.2 Define `MessageFilters` dataclass in `services/mail.py` mapping CLI args to REST v2 query params": [
+      {
+        "executionId": "8454121f-56e5-4a91-b77c-8a57e8bbf326",
+        "chatSessionId": "sess_6c84deab-18ea-4fda-b215-ce7718d4a3ee",
+        "timestamp": 1788379910404
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381087321
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381839834
+      }
+    ],
+    "1.3 Implement `MailServiceConcrete` in `services/mail.py` wrapping `OutlookClient` (REST v2)": [
+      {
+        "executionId": "8454121f-56e5-4a91-b77c-8a57e8bbf326",
+        "chatSessionId": "sess_6c84deab-18ea-4fda-b215-ce7718d4a3ee",
+        "timestamp": 1788379911214
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381850356
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788382245343
+      }
+    ],
+    "1.4 Implement `CategoryServiceConcrete` in `services/categories.py` wrapping `OutlookClient` + `category_manager`": [
+      {
+        "executionId": "8454121f-56e5-4a91-b77c-8a57e8bbf326",
+        "chatSessionId": "sess_6c84deab-18ea-4fda-b215-ce7718d4a3ee",
+        "timestamp": 1788379911998
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381853743
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788382244925
+      }
+    ],
+    "1.5 Refactor `commands/_common.py` to construct and inject services alongside `_get_client`": [
+      {
+        "executionId": "8454121f-56e5-4a91-b77c-8a57e8bbf326",
+        "chatSessionId": "sess_6c84deab-18ea-4fda-b215-ce7718d4a3ee",
+        "timestamp": 1788379912614
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788382260548
+      }
+    ],
+    "1.6 Migrate all command folders to consume services instead of `OutlookClient` directly": [
+      {
+        "executionId": "8454121f-56e5-4a91-b77c-8a57e8bbf326",
+        "chatSessionId": "sess_6c84deab-18ea-4fda-b215-ce7718d4a3ee",
+        "timestamp": 1788379913952
+      }
+    ],
+    "1.7 Write unit tests for services in `tests/` (mock `OutlookClient`/`category_manager`; assert delegation and MessageFilters → query-param mapping)": [
+      {
+        "executionId": "8454121f-56e5-4a91-b77c-8a57e8bbf326",
+        "chatSessionId": "sess_6c84deab-18ea-4fda-b215-ce7718d4a3ee",
+        "timestamp": 1788379914515
+      }
+    ],
+    "1.8 Write CliRunner regression tests confirming identical command output/exit codes through the service layer": [
+      {
+        "executionId": "8454121f-56e5-4a91-b77c-8a57e8bbf326",
+        "chatSessionId": "sess_6c84deab-18ea-4fda-b215-ce7718d4a3ee",
+        "timestamp": 1788379914997
+      }
+    ],
+    "2.1 Create `middleware.py` with `RetryMiddleware` (sync + async), delay = backoff_factor × 2^attempt": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381014717
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381849952
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788382243929
+      }
+    ],
+    "2.2 Add retry config keys to `config.py` DEFAULTS (`max_retries`=3, `backoff_factor`=1.5)": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381014801
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381087761
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381838407
+      }
+    ],
+    "2.3 Integrate `RetryMiddleware` into `OutlookClient._request()` in `client.py`": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381014940
+      }
+    ],
+    "2.4 Extend retry to the OWA layer: `_owa_action` in `client.py` and `_owa_request` in `category_manager.py`": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381015005
+      }
+    ],
+    "2.5 Write Hypothesis property test for exponential backoff (generated attempt counts + config values)": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381015079
+      }
+    ],
+    "3.1 Create `auth_services.py` with `TokenCapture`, `TokenValidator`, `TokenStorage` interfaces": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381015155
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381088319
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381839226
+      }
+    ],
+    "3.2 Implement concrete classes in `auth_services.py`": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381015233
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381849377
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788382244313
+      }
+    ],
+    "3.3 Refactor `auth.py` to delegate capture/validation/storage to the auth services": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381015315
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788382259145
+      }
+    ],
+    "3.4 Write unit tests for each auth service in `tests/` (mock browser/env/stdin/storage)": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381015815
+      }
+    ],
+    "4.1 Create `state.py` with `ProfileState` (load, save, delete, commit, rollback)": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381015903
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788382259927
+      }
+    ],
+    "4.2 Implement typed accessors get_id_map, set_id_map, get_scheduled, add_scheduled": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381015974
+      }
+    ],
+    "4.3 Add in-memory cache layer with LRU cap of 500 entries": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381016053
+      }
+    ],
+    "4.4 Refactor `client.py`, `auth.py`, `account.py` to route state access through `ProfileState`": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381016210
+      }
+    ],
+    "4.5 Write unit test for transactional commit/rollback semantics in `tests/`": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381016271
+      }
+    ],
+    "4.6 Write Hypothesis property test for LRU eviction (generated insert sequences > 500)": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381016353
+      }
+    ],
+    "5.1 Create `plugins.py` with `Plugin` interface and `PluginManager`": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381016474
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788382258516
+      }
+    ],
+    "5.2 Implement plugin discovery via `pkg_resources.iter_entry_points(\"outlook_cli.plugins\")` and declare the entry-point group in `pyproject.toml`": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381016698
+      }
+    ],
+    "5.3 Wire hook invocation points into `commands/mail/__init__.py` (send), `commands/manage/__init__.py` (delete), `commands/categories/__init__.py` (category rename)": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381016843
+      }
+    ],
+    "5.4 Write plugin loading + hook-dispatch tests in `tests/` (fake plugins; assert discovery and ordering)": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381016940
+      }
+    ],
+    "6.1 Update `OutlookCliError` in `exceptions.py` to carry a `context: dict`": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381017034
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381088727
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381838808
+      }
+    ],
+    "6.2 Update subclasses to populate context (e.g. `RateLimitError` with `retry_after`)": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381017138
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381848335
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788382245983
+      }
+    ],
+    "6.3 Ensure `error_code_for_exception()` and `exit_code_for_exception()` return stable values": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381017206
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381848941
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788382246260
+      }
+    ],
+    "6.4 Update `_exit_with_error()` (`commands/_common.py`) and `error_json()` (`serialization.py`) to surface `context` in terminal + JSON envelope": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381017283
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788382261107
+      }
+    ],
+    "6.5 Write unit tests for error context in JSON envelope and terminal output": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381017401
+      }
+    ],
+    "7.1 Create `cache.py` with `CacheManager` (get, set, invalidate, invalidate_all, TTL 300s, LRU 500, pattern invalidation `\"id_map:*\"`)": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381017546
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381089276
+      },
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381837881
+      }
+    ],
+    "7.2 Integrate with id_map loading in `client.py` (cache-first, refresh on miss)": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381017618
+      }
+    ],
+    "7.3 Add cache invalidation on login and profile switch (`auth.py`, `account.py`)": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381017725
+      }
+    ],
+    "7.4 Write Hypothesis property test for cache hit rate (generated read sequences within TTL)": [
+      {
+        "executionId": "6d100f99-50f9-4b70-b711-0699b6bc74e4",
+        "chatSessionId": "sess_eb8cb13e-5fd5-4f75-9021-ff69aed7a4d0",
+        "timestamp": 1788381017798
+      }
+    ]
+  }
+}
