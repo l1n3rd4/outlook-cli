@@ -29,6 +29,7 @@ from .helpers import (
     print_error,
     print_success,
 )
+from .html import html_to_clean_text, render_html_email
 from .mail import (
     _category_text,
     _flag_text,
@@ -72,6 +73,7 @@ __all__ = [
     "_truncate",
     "_unread_badge",
     "console",
+    "html_to_clean_text",
     "print_accounts",
     "print_attachments",
     "print_calendars",
@@ -90,4 +92,5 @@ __all__ = [
     "print_summary_dashboard",
     "print_thread",
     "print_whoami",
+    "render_html_email",
 ]

@@ -108,13 +108,11 @@ def _format_size(size_bytes: int) -> str:
 
 def _html_to_text(html: str) -> str:
     try:
-        from bs4 import BeautifulSoup
+        import bs4  # noqa: F401
+        from .html import html_to_clean_text
 
-        soup = BeautifulSoup(html, "html.parser")
-        for tag in soup(["style", "script"]):
-            tag.decompose()
-        return soup.get_text(separator="\n", strip=True)
-    except ImportError:
+        return html_to_clean_text(html)
+    except (ImportError, Exception):
         import re
 
-        return re.sub(r"<[^>]+>", "", html)
+        return re.sub(r"<[^>]+>", "", html).strip()

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from rich.console import Console, Group
 from rich.panel import Panel
 from rich.text import Text
 
@@ -17,6 +18,7 @@ from .helpers import (
     _truncate,
     console,
 )
+from .html import render_html_email
 
 
 def _category_text(categories: list[str], category_colors: dict[str, int], max_len: int) -> Text:
@@ -70,6 +72,20 @@ def print_inbox(messages: list[Email], category_colors: dict[str, int] | None = 
     console.print(table)
 
 
+def _email_body_panel(email: Email) -> Panel | None:
+    if email.body_type == "HTML":
+        capture_console = Console(width=max(console.width - 4, 40))
+        with capture_console.capture() as cap:
+            render_html_email(email.body, console=capture_console)
+        captured = cap.get().rstrip("\n")
+        content = Text.from_ansi(captured) if captured else None
+    else:
+        body = email.body.strip()
+        content = Text(body) if body else None
+
+    return Panel(content, border_style="cyan") if content else None
+
+
 def print_email(email: Email) -> None:
     header = (
         f"[bold]From:[/bold] {_safe(email.sender)}\n"
@@ -89,11 +105,12 @@ def print_email(email: Email) -> None:
         header += "[bold]Flag:[/bold] Complete\n"
     header += f"[bold]Subject:[/bold] {_safe(email.subject)}"
 
-    body = _html_to_text(email.body) if email.body_type == "HTML" else email.body
-
     console.print(Panel(header, title=f"Message #{email.display_num}", border_style="cyan"))
-    console.print()
-    console.print(body, markup=False)
+
+    body_panel = _email_body_panel(email)
+    if body_panel:
+        console.print()
+        console.print(body_panel)
 
 
 def print_thread(messages: list[Email]) -> None:
@@ -105,24 +122,31 @@ def print_thread(messages: list[Email]) -> None:
         date = email.received.strftime("%Y-%m-%d %H:%M")
         read_marker = "" if email.is_read else " [bold cyan]*[/bold cyan]"
 
-        header = f"[bold]#{email.display_num}[/bold]  [dim]{date}[/dim]  {_safe(sender)}{read_marker}"
-        console.print(header)
+        header = f"[bold]From:[/bold] {_safe(sender)}  [dim]{date}[/dim]"
+        header_text = Text.from_markup(header)
 
         body = _html_to_text(email.body) if email.body_type == "HTML" else email.body
         body = body.strip()
+
+        elements = [header_text]
         if body:
             lines = body.split("\n")
             truncated = len(lines) > 20
             if truncated:
                 extra = len(lines) - 20
                 lines = lines[:20]
-            for line in lines:
-                console.print(f"  {line}", markup=False)
+            elements.append(Text(""))
+            elements.append(Text("\n".join(lines)))
             if truncated:
-                console.print(f"  [dim]... ({extra} more lines)[/dim]")
+                elements.append(Text(f"... ({extra} more lines)", style="dim"))
 
+        panel = Panel(
+            Group(*elements),
+            title=f"Message #{email.display_num}{read_marker}",
+            border_style="cyan",
+        )
+        console.print(panel)
         if not is_last:
-            console.print(f"  [dim]{'─' * 60}[/dim]")
             console.print()
 
 

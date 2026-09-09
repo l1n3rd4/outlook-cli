@@ -68,6 +68,7 @@ pytest -m smoke      # run only smoke tests (require live token)
   - `owa.py` — `service.svc` category CRUD requests with URL post data.
   - `propagation.py` — Bulk message propagation across folders via REST v2.
 - **`formatter/`** — Modular Rich terminal output:
+  - `html/` — Modular Rich HTML email reader engine (`cleaner.py`, `inline.py`, `lists.py`, `tables.py`, `code.py`, `body.py`).
   - `helpers.py` — Rich console, box styling, text truncation, formatters.
   - `mail.py` — Inbox table and email/thread formatters.
   - `calendar.py` — Calendar view, event details, meeting time suggestions.

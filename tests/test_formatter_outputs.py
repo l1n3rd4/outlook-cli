@@ -100,6 +100,20 @@ def test_print_email_html_body_converted(capsys, make_email):
     assert "<p>" not in captured.err
 
 
+def test_print_email_empty_body(capsys, make_email):
+    email = make_email(body="")
+    formatter.print_email(email)
+    captured = capsys.readouterr()
+    assert "From:" in captured.err
+
+
+def test_print_email_empty_html_body(capsys, make_email):
+    email = make_email(body="", body_type="HTML")
+    formatter.print_email(email)
+    captured = capsys.readouterr()
+    assert "From:" in captured.err
+
+
 def test_print_thread_renders_all_messages(capsys, make_email):
     first = make_email(display_num=1, subject="Re: Topic", is_read=True, body="First message")
     second = make_email(display_num=2, is_read=False, body="Second message")

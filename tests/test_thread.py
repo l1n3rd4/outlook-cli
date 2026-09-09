@@ -66,6 +66,26 @@ class TestPrintThread:
         captured = capsys.readouterr()
         assert "more lines" in captured.err
 
+    def test_thread_renders_panels(self, capsys):
+        """Each message in a thread should render as a Panel with Message # title and From."""
+        messages = [
+            _make_email("First", "Alice", 1),
+            _make_email("Second", "Bob", 2),
+        ]
+        print_thread(messages)
+        captured = capsys.readouterr()
+        assert "Message #1" in captured.err
+        assert "Message #2" in captured.err
+        assert "From:" in captured.err
+
+    def test_empty_body_message(self, capsys):
+        """A message with an empty body should render cleanly."""
+        email = _make_email("Empty", "Alice", 1)
+        email.body = "   "
+        print_thread([email])
+        captured = capsys.readouterr()
+        assert "Message #1" in captured.err
+
 
 class TestGetThread:
     def test_returns_conversation_messages(self):
